@@ -1,0 +1,143 @@
+#### 1.1 Load Libraries and Data
+
+python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# Load dataset
+players = pd.read_csv('Player.csv')
+player_stats = pd.read_csv('Player_Attributes.csv')
+
+
+### Step 2: Feature Engineering
+Create new features such as player form, impact rating, etc., and clean the data.
+
+#### 2.1 Data Preprocessing and Feature Creation
+
+python
+# Merge player details with their stats
+df = pd.merge(player_stats, players, how='inner', on='player_api_id')
+
+# Select relevant columns and handle missing values
+df = df[['player_api_id', 'player_name', 'overall_rating', 'potential', 'crossing', 'finishing', 
+         'heading_accuracy', 'short_passing', 'volleys', 'dribbling', 'curve', 'free_kick_accuracy', 
+         'long_passing', 'ball_control', 'acceleration', 'sprint_speed', 'agility', 'reactions', 
+         'balance', 'shot_power', 'jumping', 'stamina', 'strength', 'long_shots', 'aggression', 
+         'interceptions', 'positioning', 'vision', 'penalties', 'marking', 'standing_tackle', 
+         'sliding_tackle', 'gk_diving', 'gk_handling', 'gk_kicking', 'gk_positioning', 'gk_reflexes']]
+
+df = df.dropna()
+
+# Create new features
+df['impact_rating'] = df[['overall_rating', 'potential']].mean(axis=1)
+
+# Standardize the features for clustering
+scaler = StandardScaler()
+df_scaled = scaler.fit_transform(df.drop(['player_api_id', 'player_name'], axis=1))
+
+
+### Step 3: Model Training
+Use regression models to predict future performance metrics.
+
+#### 3.1 Regression Analysis
+
+python
+# Select features and target variable
+X = df[['crossing', 'finishing', 'heading_accuracy', 'short_passing', 'volleys', 'dribbling', 
+        'curve', 'free_kick_accuracy', 'long_passing', 'ball_control', 'acceleration', 'sprint_speed', 
+        'agility', 'reactions', 'balance', 'shot_power', 'jumping', 'stamina', 'strength', 'long_shots', 
+        'aggression', 'interceptions', 'positioning', 'vision', 'penalties', 'marking', 'standing_tackle', 
+        'sliding_tackle', 'gk_diving', 'gk_handling', 'gk_kicking', 'gk_positioning', 'gk_reflexes']]
+y = df['overall_rating']
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a Linear Regression model
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+
+# Predict and evaluate
+y_pred = lr.predict(X_test)
+print('Mean Squared Error:', mean_squared_error(y_test, y_pred))
+print('R^2 Score:', r2_score(y_test, y_pred))
+
+
+### Step 4: Clustering
+Cluster players into groups based on performance metrics.
+
+#### 4.1 Clustering Players
+
+python
+# Perform K-Means Clustering
+kmeans = KMeans(n_clusters=5, random_state=42)
+kmeans.fit(df_scaled)
+
+# Add cluster labels to the original DataFrame
+df['cluster'] = kmeans.labels_
+
+# Visualize the clusters
+sns.set(style="white")
+plt.figure(figsize=(12, 8))
+sns.scatterplot(x='finishing', y='overall_rating', hue='cluster', data=df, palette='viridis')
+plt.title('Player Clusters based on Performance Metrics')
+plt.show()
+
+
+### Step 5: Neural Networks
+Use neural networks to predict player performance metrics.
+
+#### 5.1 Neural Network for Performance Prediction
+
+python
+# Normalize the data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Split the data
+X_train_nn, X_test_nn, y_train_nn, y_test_nn = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Build the neural network model
+model = Sequential()
+model.add(Dense(64, activation='relu', input_dim=X_train_nn.shape[1]))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1))
+
+model.compile(optimizer='adam', loss='mse')
+
+# Train the model
+model.fit(X_train_nn, y_train_nn, epochs=100, batch_size=32, validation_split=0.2)
+
+# Predict and evaluate
+y_pred_nn = model.predict(X_test_nn)
+print('Mean Squared Error (NN):', mean_squared_error(y_test_nn, y_pred_nn))
+print('R^2 Score (NN):', r2_score(y_test_nn, y_pred_nn))
+
+
+### Step 6: Visualization
+Visualize player performance over time and compare with peers.
+
+#### 6.1 Performance Visualization
+
+python
+# Example visualization: Overall rating vs. time for a specific player
+player_id = df['player_api_id'].unique()[0]  # Replace with specific player ID
+player_data = df[df['player_api_id'] == player_id]
+
+plt.figure(figsize=(12, 6))
+plt.plot(player_data['date'], player_data['overall_rating'], marker='o')
+plt.title(f'Overall Rating Over Time for Player ID: {player_id}')
+plt.xlabel('Date')
+plt.ylabel('Overall Rating')
+plt.grid(True)
+plt.show()
